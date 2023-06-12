@@ -5,8 +5,7 @@
 1. Настраивать балансировку с помощью HAProxy
 2. Настраивать связку HAProxy + Nginx
 
-
-
+## Содержание
 
 - [Задание 1. HAPROXY level 4 + simple python server](#Задание-1)
 - [Задание 2. HAPROXY level 7 + simple python server](#Задание-2)  
