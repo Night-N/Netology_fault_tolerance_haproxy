@@ -19,7 +19,7 @@
 Настройте балансировку Round-robin на 4 уровне.</br>
 На проверку направьте конфигурационный файл haproxy, скриншоты, где видно перенаправление запросов на разные серверы при обращении к HAProxy.
 
-- Решил настроить локальный simple python server с https.
+Решил попробовать настроить локальный simple python server с https.
 1. Необходимо было создать локальный сертификат для доменов, на которых будет доступен сервер \(example.local, localhost, 127.0.0.1\) </br>
 Для этого воспользовался утилитой mkcert (https://github.com/FiloSottile/mkcert), которую удобно применять для  создания самоподписных сертификатов, добавления собственного корневого сертификата в системное хранилище и в хранилище сертификатов браузеров Firefox и Chrome на время разработки.
 > git clone https://github.com/FiloSottile/mkcert && cd mkcert </br>
@@ -68,6 +68,14 @@ if __name__ == '__main__':
    - Наконец, опция ssl-hello-chk указывает Haproxy проверять целостность SSL соединения.
 
 ```haproxy
+
+frontend stats
+    mode http
+    bind *:9000
+    stats enable
+    stats uri /stats
+    stats refresh 10s
+    stats admin if LOCALHOST
 frontend py_1
     bind *:443
     mode tcp
@@ -85,14 +93,16 @@ backend py_servers
     tcp-response content accept if serverhello
     stick on payload_lv(43,1) if clienthello
     stick store-response payload_lv(43,1) if serverhello
-    server py1 127.0.0.1:8001
-    server py2 127.0.0.1:8002
-    option ssl-hello-chk
+    server py1 127.0.0.1:8001 check check-ssl verify none check-sni localhost
+    server py2 127.0.0.1:8002 check check-ssl verify none check-sni localhost
 
 ```
 
+Ниже показана работа всей сборки, при обновлении страницы в браузере клиент по очереди получает страницу с первого и потом со второго сервера:
+![](./img/task1.gif)
 
-
+Страница /stats haproxy, оба сервера доступны. При выключении одного из серверов, запросы клиента уходят на оставшийся. 
+![](./img/task1-stats.jpg)
 
 ## Задание 2
 > Запустите три simple python сервера на своей виртуальной машине на разных портах
@@ -108,13 +118,6 @@ backend py_servers
 
 - Текст:
 Текст
-
-![](img/1.jpg)
-
-- Текст:
-
-[keepalived.conf](./keepalived.conf)
-
 
 
 ## Задание 3
