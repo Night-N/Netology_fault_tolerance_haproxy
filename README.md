@@ -178,4 +178,39 @@ server {
 Настройте фронтенд HAProxy так, чтобы в зависимости от запрашиваемого сайта example1.local или example2.local запросы перенаправлялись на разные бэкенды HAProxy</br>
 На проверку направьте конфигурационный файл HAProxy, скриншоты, демонстрирующие запросы к разным фронтендам и ответам от разных бэкендов.
 
+- Сервера Python запущены на портах 8001 8002 8003 8004 
+> python3 -m http.server 8001
 
+![](./img/task4.jpg)
+- Результат обращения к доменным именам example1.local example2.local:
+![](./img/task4-2.jpg)
+- Конфигурация HAProxy
+```HAProxy
+frontend py_1
+    bind *:443  ssl crt /home/night/cert-all.pem
+    mode http
+    option http-server-close
+    http-response set-header Cache-Control "no-cache, no-store, must-revalidate"
+    http-response set-header Pragma no-cache
+    http-response set-header Expires 0
+
+    acl acl_example1.local hdr(host) -i example1.local
+    acl acl_example2.local hdr(host) -i example2.local
+    use_backend py_servers1 if acl_example1.local
+    use_backend py_servers2 if acl_example2.local
+
+backend py_servers1
+    mode http
+    balance roundrobin
+    server py1 127.0.0.1:8001 weight 1 check
+    server py2 127.0.0.1:8002 weight 2 check
+    http-check send meth GET uri / ver HTTP/1.1 hdr host haproxy
+
+backend py_servers2
+    mode http
+    balance roundrobin
+    server py1 127.0.0.1:8003 weight 1 check
+    server py2 127.0.0.1:8004 weight 2 check
+    http-check send meth GET uri / ver HTTP/1.1 hdr host haproxy
+
+```
