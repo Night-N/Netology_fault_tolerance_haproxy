@@ -7,10 +7,10 @@
 
 ## Содержание
 
-- [Задание 1. HAPROXY level 4 + simple python server](#Задание-1)
-- [Задание 2. HAPROXY level 7 + simple python server](#Задание-2)  
-- [Задание 3. HAPROXY + nginx + simple python server](#Задание-3) 
-- [Задание 4. HAPROXY. Два бекэнда, simple python server](#Задание-4)  
+- [Задание 1. HAProxy level 4 + simple python server](#Задание-1)
+- [Задание 2. HAProxy level 7 + simple python server](#Задание-2)  
+- [Задание 3. HAProxy + nginx + simple python server](#Задание-3) 
+- [Задание 4. HAProxy. Два бекэнда, simple python server](#Задание-4)  
 
 
 ## Задание 1
@@ -56,18 +56,17 @@ if __name__ == '__main__':
     httpd.serve_forever()
 
 ```
-3. Haproxy 
+3. HAProxy 
    - Настроен фронтэнд на 443 порту, в режиме tcp
    - Для корректного перенаправления https трафика проверяется наличие заголовка req_ssl_hello_type 1 со стороны клиента и трафик предназначенный для localhost перенаправляется на бекэнд сервер.
    - Бекэнд работает в режиме tcp, roundrobin
-   - Haproxy в данном примере не финализирует SSL, при этом должен корректно обрабатывать его 
-   - Включена sticky table, в которой haproxy хранит и отслеживает сессии
+   - HAProxy в данном примере не финализирует SSL, при этом должен корректно обрабатывать его 
+   - Включена sticky table, в которой HAProxy хранит и отслеживает сессии
    - Добавлен acl для отслеживания SSL трафика от клиента к серверу req_ssl_hello_type 1 и ответы сервера клиенту rep_ssl_hello_type 2
    - Входящие tcp запросы принимаются от acl clienthello, a ответы от acl serverhello
-   - В процессе установления SSL соединения Haproxy анализирует трафик по полю SSL Client Hello message. Запись и чтение состояния сессии осуществляется по 43му байту http заголовка. Запись состояния сессии осуществляется с помощью команды stick on payload_lv(43,1) при наличии clienthello, а запись ответа сервера сохраняется с помощью команды stick store-response payload_lv(43,1) при наличии serverhello.
-   - Наконец, опция ssl-hello-chk указывает Haproxy проверять целостность SSL соединения.
+   - В процессе установления SSL соединения HAProxy анализирует трафик по полю SSL Client Hello message. Запись и чтение состояния сессии осуществляется по 43му байту http заголовка. Запись состояния сессии осуществляется с помощью команды stick on payload_lv(43,1) при наличии clienthello, а запись ответа сервера сохраняется с помощью команды stick store-response payload_lv(43,1) при наличии serverhello.
 
-```haproxy
+```HAProxy
 
 frontend stats
     mode http
@@ -82,6 +81,7 @@ frontend py_1
     tcp-request inspect-delay 5s
     tcp-request content accept if { req_ssl_hello_type 1 }
     use_backend py_servers if { req_ssl_sni -i localhost }
+    use_backend py_servers if { req_ssl_sni -i example.local }
 backend py_servers
     mode tcp
     balance roundrobin
@@ -101,23 +101,24 @@ backend py_servers
 Ниже показана работа всей сборки, при обновлении страницы в браузере клиент по очереди получает страницу с первого и потом со второго сервера:
 ![](./img/task1.gif)
 
-Страница /stats haproxy, оба сервера доступны. При выключении одного из серверов, запросы клиента уходят на оставшийся. 
+Страница /stats HAProxy, оба сервера доступны. При выключении одного из серверов запросы клиента уходят на оставшийся. 
 ![](./img/task1-stats.jpg)
 
 ## Задание 2
-> Запустите три simple python сервера на своей виртуальной машине на разных портах
+> Запустите три simple python сервера на своей виртуальной машине на разных портах </br>
+Настройте балансировку Weighted Round Robin на 7 уровне, чтобы первый сервер имел вес 2, второй - 3, а третий - 4 </br>
+HAproxy должен балансировать только тот http-трафик, который адресован домену example.local </br>
+На проверку направьте конфигурационный файл haproxy, скриншоты, где видно перенаправление запросов на разные серверы при обращении к HAProxy c использованием домена example.local и без него. </br>
 
-> Настройте балансировку Weighted Round Robin на 7 уровне, чтобы первый сервер имел вес 2, второй - 3, а третий - 4
+- Добавлен третий сервер Python. На серверах Python отключено финализирование SSL
+- Конфигурация HAProxy переписана для взаимодействия на 7 уровне (http), серверам добавлены веса
+- Добавлен аксесс лист для домена example.local
 
-> HAproxy должен балансировать только тот http-трафик, который адресован домену example.local
+Конфигурация HAProxy:
+[haproxy-http-weighted.cfg](./haproxy-http-weighted.cfg)
 
-> На проверку направьте конфигурационный файл haproxy, скриншоты, где видно перенаправление запросов на разные серверы при обращении к HAProxy c использованием домена example.local и без него.
-
-- Текст:
-Текст
-
-- Текст:
-Текст
+Доступ к 127.0.0.1:443 и https://example.local:
+![](./img/task2.jpg)
 
 
 ## Задание 3
