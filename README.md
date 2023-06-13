@@ -123,13 +123,53 @@ HAproxy должен балансировать только тот http-тра�
 
 ## Задание 3
 
-> Настройте связку HAProxy + Nginx как было показано на лекции.
+> Настройте связку HAProxy + Nginx как было показано на лекции.</br>
+Настройте Nginx так, чтобы файлы .jpg выдавались самим Nginx (предварительно разместите несколько тестовых картинок в директории /var/www/), а остальные запросы переадресовывались на HAProxy, который в свою очередь переадресовывал их на два Simple Python server.</br>
+На проверку направьте конфигурационные файлы nginx, HAProxy, скриншоты с запросами jpg картинок и других файлов на Simple Python Server, демонстрирующие корректную настройку.</br>
 
-> Настройте Nginx так, чтобы файлы .jpg выдавались самим Nginx (предварительно разместите несколько тестовых картинок в директории /var/www/), а остальные запросы переадресовывались на HAProxy, который в свою очередь переадресовывал их на два Simple Python server.
+- Nginx слушает на порту 8080, https, запросы вида https://example.local:8080/.*\.(png|ico|gif|jpg|jpeg) nginx обрабатывает сам и отдаёт картинки из директории /var/www/, запросы вида https://example.local:8080/ передаются на адрес HAProxy https://example.local:443/
+- На одном и том же адресе доступны python-сервера находящиеся за HAProxy и картинки из директории /var/www/:
+![](./img/task3.jpg)
+- Конфигурация HAProxy из предыдущего задания - без изменений. [haproxy-http-weighted.cfg](./haproxy-http-weighted.cfg)
+- Конфигурация Nginx: 
+```Nginx
+upstream haproxy_backend {
+    server example.local:443;
+}
 
-> На проверку направьте конфигурационные файлы nginx, HAProxy, скриншоты с запросами jpg картинок и других файлов на Simple Python Server, демонстрирующие корректную настройку.
+server {
+        listen 8080 ssl default_server;
+        listen [::]:8080 ssl default_server;
 
-- Текст:
+        ssl_session_cache shared:le_nginx_SSL:10m;
+        ssl_session_timeout 1440m;
+        ssl_session_tickets off;
+
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_prefer_server_ciphers off;
+
+        ssl_ciphers "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES25>
+
+        ssl_certificate /home/night/server1/server.pem;
+        ssl_certificate_key /home/night/server1/key.pem;
+
+        root /var/www/;
+
+        server_name example.local;
+
+        location ~* \.(png|ico|gif|jpg|jpeg)$ {
+                try_files $uri =404;
+        }
+
+        location / {
+        proxy_pass https://haproxy_backend/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        }
+}
+```
 Текст
 
 - Текст:
